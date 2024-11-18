@@ -1,0 +1,45 @@
+using Google.Apis.Auth.OAuth2;
+using FirebaseAdmin;
+using Google.Cloud.Firestore;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace MyBackend.Services
+{
+    public class FirestoreService
+    {
+        private readonly FirestoreDb _firestoreDb;
+
+        public FirestoreService()
+        {
+            // Explicitly set the path to the service account credentials file
+            var serviceAccountPath = "C:/Users/User/Desktop/CynapseInterview/backend/ServiceAccountKey.json";
+
+            // Set GOOGLE_APPLICATION_CREDENTIALS environment variable manually
+            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", serviceAccountPath);
+
+            
+            FirebaseApp.Create(new AppOptions
+            {
+                Credential = GoogleCredential.FromFile(serviceAccountPath)
+            });
+
+            
+            _firestoreDb = FirestoreDb.Create("cynapseinterview");  
+        }
+
+        public async Task AddAllocationAsync(string collectionName, object data)
+        {
+            var docRef = _firestoreDb.Collection(collectionName).Document();
+            await docRef.SetAsync(data);
+        }
+
+        public async Task<List<Dictionary<string, object>>> GetAllAllocationsAsync(string collectionName)
+        {
+            var query = _firestoreDb.Collection(collectionName);
+            var snapshot = await query.GetSnapshotAsync();
+            return snapshot.Documents.Select(doc => doc.ToDictionary()).ToList();
+        }
+    }
+}
