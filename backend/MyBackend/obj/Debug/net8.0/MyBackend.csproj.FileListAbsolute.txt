@@ -336,6 +336,7 @@ C:\Users\User\Desktop\CynapseInterview\backend\MyBackend\obj\Debug\net8.0\MyBack
 C:\Users\User\Desktop\CynapseInterview\backend\MyBackend\obj\Debug\net8.0\MyBackend.csproj.CoreCompileInputs.cache
 C:\Users\User\Desktop\CynapseInterview\backend\MyBackend\obj\Debug\net8.0\MyBackend.MvcApplicationPartsAssemblyInfo.cs
 C:\Users\User\Desktop\CynapseInterview\backend\MyBackend\obj\Debug\net8.0\MyBackend.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\User\Desktop\CynapseInterview\backend\MyBackend\obj\Debug\net8.0\MyBackend.sourcelink.json
 C:\Users\User\Desktop\CynapseInterview\backend\MyBackend\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\User\Desktop\CynapseInterview\backend\MyBackend\obj\Debug\net8.0\staticwebassets.development.json
 C:\Users\User\Desktop\CynapseInterview\backend\MyBackend\obj\Debug\net8.0\staticwebassets\msbuild.MyBackend.Microsoft.AspNetCore.StaticWebAssets.props

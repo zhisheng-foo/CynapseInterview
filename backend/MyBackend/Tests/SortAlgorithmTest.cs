@@ -5,40 +5,19 @@ using System.Collections.Generic;
 using System.Linq;
 using FirebaseAdmin;
 using Google.Cloud.Firestore;
-using Microsoft.Extensions.Configuration;
 using Google.Apis.Auth.OAuth2;
-using System.IO;
+using Grpc.Net.Client;
+using System.Threading.Tasks;
 
 namespace MyBackend.Tests
 {
     public class SortAlgorithmServiceTests
     {
         private readonly SortAlgorithmService _sortAlgorithmService;
-        private readonly FirestoreDb _firestoreDb;
         private const decimal Tolerance = 0.01m; // Define a tolerance for floating-point comparison
-        private const string ProjectId = "cynapseinterview"; // Set your actual Firebase Project ID
 
         public SortAlgorithmServiceTests()
         {
-            // Load configuration from appsettings.json
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory()) // Set the base path for the configuration
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true) // Load appsettings.json
-                .Build();
-
-            // Get the service account key path from configuration
-            var serviceAccountPath = configuration["Firebase:ServiceAccountKeyPath"];
-            
-            if (string.IsNullOrEmpty(serviceAccountPath))
-            {
-                throw new InvalidOperationException("Service Account Key Path is not configured in appsettings.json.");
-            }
-
-            // Set the environment variable for Google application credentials
-            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", serviceAccountPath);
-
-            // Initialize Firestore client
-            _firestoreDb = FirestoreDb.Create(ProjectId); // Use your actual Firebase project ID
             _sortAlgorithmService = new SortAlgorithmService();
         }
 
@@ -50,18 +29,19 @@ namespace MyBackend.Tests
 
             var result = _sortAlgorithmService.Allocate(totalAmount, numberOfParticipants);
 
-            Assert.Equal(numberOfParticipants, result.Count); 
-            Assert.True(Math.Abs(totalAmount - result.Sum(r => r.Value)) < Tolerance, "The sum of allocations does not match the total amount."); 
-            Assert.All(result, r => Assert.True(r.Value >= 0)); 
+            Assert.Equal(numberOfParticipants, result.Count);
+            Assert.True(Math.Abs(totalAmount - result.Sum(r => r.Value)) < Tolerance, 
+                        "The sum of allocations does not match the total amount.");
+            Assert.All(result, r => Assert.True(r.Value >= 0));
         }
 
         [Fact]
         public void Allocate_ShouldThrowException_WhenInvalidInput()
         {
-            Assert.Throws<ArgumentException>(() => _sortAlgorithmService.Allocate(0, 5)); 
-            Assert.Throws<ArgumentException>(() => _sortAlgorithmService.Allocate(10, 0)); 
-            Assert.Throws<ArgumentException>(() => _sortAlgorithmService.Allocate(-1, 5)); 
-            Assert.Throws<ArgumentException>(() => _sortAlgorithmService.Allocate(10, -5)); 
+            Assert.Throws<ArgumentException>(() => _sortAlgorithmService.Allocate(0, 5));
+            Assert.Throws<ArgumentException>(() => _sortAlgorithmService.Allocate(10, 0));
+            Assert.Throws<ArgumentException>(() => _sortAlgorithmService.Allocate(-1, 5));
+            Assert.Throws<ArgumentException>(() => _sortAlgorithmService.Allocate(10, -5));
         }
 
         [Theory]
@@ -72,8 +52,9 @@ namespace MyBackend.Tests
         {
             var result = _sortAlgorithmService.Allocate(totalAmount, numberOfParticipants);
 
-            Assert.Equal(numberOfParticipants, result.Count); 
-            Assert.True(Math.Abs(totalAmount - result.Sum(r => r.Value)) < Tolerance, "The sum of allocations does not match the total amount."); 
+            Assert.Equal(numberOfParticipants, result.Count);
+            Assert.True(Math.Abs(totalAmount - result.Sum(r => r.Value)) < Tolerance, 
+                        "The sum of allocations does not match the total amount.");
         }
 
         [Fact]
@@ -84,28 +65,48 @@ namespace MyBackend.Tests
 
             var result = _sortAlgorithmService.Allocate(totalAmount, numberOfParticipants);
 
-            Assert.All(result, r => Assert.True(Math.Abs(r.Value - Math.Round(r.Value, 2)) < Tolerance, "Allocation amounts are not rounded to two decimals."));
+            Assert.All(result, r => 
+                Assert.True(Math.Abs(r.Value - Math.Round(r.Value, 2)) < Tolerance, 
+                            "Allocation amounts are not rounded to two decimals."));
         }
-
         [Fact]
-        public async void TestFireStorePersistence()
-        {   
-            var collectionName = "test_allocations";
+        public async Task TestFireStorePersistence()
+        {
+            const string collectionName = "test_allocations";
+            const string projectId = "cynapseinterview"; 
 
+
+            const string serviceAccountKeyPath = "C:/Users/User/Desktop/CynapseInterview/backend/ServiceAccountKey.json";
+            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", serviceAccountKeyPath);
+
+            // Authenticate using the service account credentials via environment variable
+            var firestoreDb = FirestoreDb.Create(projectId);
+            Console.WriteLine($"Connected to Firestore project: {firestoreDb.ProjectId}");
+
+            // Data to add
             var testAllocation = new
             {
                 Participant = "Participant 2",
-                Amount = (double)10.00m, 
+                Amount = 10.00, // Use double directly
                 Timestamp = Timestamp.GetCurrentTimestamp()
             };
 
-            var collectionReference = _firestoreDb.Collection(collectionName);
+            // Perform Firestore operations
+            var collectionReference = firestoreDb.Collection(collectionName);
+            Console.WriteLine($"Collection reference: {collectionReference.Path}");
+
             var documentReference = await collectionReference.AddAsync(testAllocation);
+            Console.WriteLine($"Document added with ID: {documentReference.Id}");
+
             var documentSnapshot = await documentReference.GetSnapshotAsync();
 
+            // Assertions
             Assert.True(documentSnapshot.Exists, "Document was not persisted in Firestore.");
             Assert.Equal(testAllocation.Participant, documentSnapshot.GetValue<string>("Participant"));
-            Assert.Equal(testAllocation.AmountAsDouble, documentSnapshot.GetValue<double>("AmountAsDouble"));
-        }
+            Assert.Equal(testAllocation.Amount, documentSnapshot.GetValue<double>("Amount"));
+
+            Console.WriteLine("Firestore persistence test passed!");
+        }   
     }
+
 }
